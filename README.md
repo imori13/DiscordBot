@@ -3,6 +3,8 @@
 Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャンネルに通知するとともに、Discordから一部のTrello操作を可能にするアプリケーションです。
 
 > **問題が発生した場合は？** [トラブルシューティングガイド](TROUBLESHOOTING.md)をご覧ください。特にDocker環境でのコマンド重複問題への対処法を記載しています。
+>
+> **セキュリティ情報**: 機密情報の取り扱いについては[セキュリティガイドライン](SECURITY.md)を必ず確認してください。
 
 ## 機能
 
@@ -151,16 +153,24 @@ Docker環境では、設定ファイルは次の場所に保存されます：
 npm install
 ```
 
-2. `.env.example`ファイルをコピーして`.env`ファイルを作成し、以下の環境変数を設定
-```
+2. `.env.example`ファイルをコピーして`.env`ファイルを作成し、必要な環境変数を設定
+```bash
+# Discord Bot設定
 DISCORD_TOKEN=あなたのDiscordボットトークン
 DISCORD_CHANNEL_ID=通知を送信したいチャンネルのID
+CLIENT_ID=DiscordボットのクライアントID
+GUILD_ID=特定のサーバーにコマンドを登録する場合のID
+
+# Trello API設定
 TRELLO_API_KEY=TrelloのAPIキー
 TRELLO_TOKEN=Trelloのトークン
 TRELLO_BOARD_ID=監視したいTrelloボードID（オプション）
 ```
 
-> **注意**: `TRELLO_BOARD_ID`はオプションになりました。設定しない場合は自動的に利用可能なボードを検出します。
+> **注意**: 
+> - `TRELLO_BOARD_ID`はオプションになりました。設定しない場合は自動的に利用可能なボードを検出します。
+> - 環境変数には機密情報が含まれるため、`.env`ファイルは必ず`.gitignore`に含め、リポジトリにコミットしないでください。
+> - 詳細は[セキュリティガイドライン](SECURITY.md)を参照してください。
 
 3. TypeScriptをビルド
 ```bash

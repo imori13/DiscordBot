@@ -1,5 +1,8 @@
 # 環境変数ファイル（機密情報を含むため）
 .env
+.env.*
+!.env.*.example
+!.env.example
 
 # Node.js 依存関係
 node_modules/

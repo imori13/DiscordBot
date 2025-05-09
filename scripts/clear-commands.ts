@@ -21,7 +21,6 @@ async function clearCommands() {
     console.log('CLIENT_IDはDiscord Developer Portalで確認できます。');
     process.exit(1);
   }
-
   try {
     console.log('Discordスラッシュコマンドをクリアしています...');
     
@@ -36,8 +35,8 @@ async function clearCommands() {
     console.log('✅ グローバルコマンドをクリアしました');
     
     // 特定のギルド（サーバー）のコマンドもクリアする場合
-    // ここにサーバーIDを入力してください
-    const GUILD_ID = '1368096539200851989'; // スクリーンショットから取得したサーバーID
+    // 環境変数からギルドIDを取得
+    const GUILD_ID = process.env.GUILD_ID;
     
     if (GUILD_ID) {
       console.log(`サーバー(${GUILD_ID})のコマンドをクリア中...`);
