@@ -48,3 +48,35 @@ npm run dev
 ### Trello関連
 - [Trello API Key](https://trello.com/app-key)からAPIキーとトークンを取得
 - 監視したいボードのURLから`https://trello.com/b/XXXX/board-name.json`で開かれる先頭のIDを取得
+
+## Docker Composeによる実行
+
+### 本番環境
+
+```bash
+# コンテナをビルドして起動
+docker-compose up -d --build
+
+# ログの確認
+docker-compose logs -f
+
+# コンテナの停止
+docker-compose down
+```
+
+### 開発環境
+
+```bash
+# 開発環境用の.env.devファイルを作成
+cp .env.dev.example .env.dev
+# .env.devファイルを適切に編集
+
+# 開発用コンテナをビルドして起動
+docker-compose -f docker-compose.dev.yml up -d --build
+
+# ログの確認
+docker-compose -f docker-compose.dev.yml logs -f
+
+# コンテナの停止
+docker-compose -f docker-compose.dev.yml down
+```
