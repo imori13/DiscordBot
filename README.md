@@ -24,9 +24,19 @@ TRELLO_TOKEN=Trelloのトークン
 TRELLO_BOARD_ID=監視したいTrelloボードID
 ```
 
-3. Botを起動
+3. TypeScriptをビルド
 ```bash
-node bot.js
+npm run build
+```
+
+4. Botを起動
+```bash
+npm start
+```
+
+開発モードで起動する場合:
+```bash
+npm run dev
 ```
 
 ## 環境変数の取得方法

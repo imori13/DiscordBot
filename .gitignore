@@ -4,6 +4,15 @@
 # Node.js 依存関係
 node_modules/
 
+# ビルド生成物
+dist/
+build/
+*.js
+!jest.config.js
+
+# 実行可能ファイル
+bin/
+
 # ログファイル
 *.log
 npm-debug.log*
