@@ -35,9 +35,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    // 特権インテントはDiscord Developer Portalで有効化が必要です
-    // 必要に応じて以下をコメント解除してください
-    // GatewayIntentBits.MessageContent,
+    GatewayIntentBits.MessageContent,
   ]
 });
 
@@ -88,16 +86,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const focused = interaction.options.getFocused(true);
     const subcommand = interaction.options.getSubcommand(false);
     
-    if (command === 'trello-card' && subcommand === 'view') {
+    if (command === 'trello-list-cards' && focused.name === 'list_id') {
+      // リスト選択のオートコンプリート
+      try {
+        const lists = await getTrelloBoardLists();
+        const choices = lists.map((list: TrelloList) => ({
+          name: `${list.name}`,
+          value: list.id
+        }));
+        
+        console.log('trello-list-cards コマンドのオートコンプリートを提供:', choices.length);
+        await interaction.respond(choices);
+      } catch (error) {
+        console.error('オートコンプリートエラー (lists):', error);
+        await interaction.respond([]);
+      }
+    } else if (command === 'trello-card' && subcommand === 'view') {
       if (focused.name === 'list_id') {
         // リスト選択のオートコンプリート
         try {
           const lists = await getTrelloBoardLists();
           const choices = lists.map((list: TrelloList) => ({
-            name: `${list.name} (${list.id.substring(0, 8)}...)`,
+            name: `${list.name}`,
             value: list.id
           }));
           
+          console.log('オートコンプリートのリスト選択肢を提供:', choices.length);
           await interaction.respond(choices);
         } catch (error) {
           console.error('オートコンプリートエラー (lists):', error);
@@ -110,12 +124,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
           if (listId) {
             const cards = await getTrelloListCards(listId);
             const choices = cards.map((card: TrelloCard) => ({
-              name: `${card.name} (${card.id.substring(0, 8)}...)`,
+              name: `${card.name}`,
               value: card.id
             }));
             
+            console.log('オートコンプリートのカード選択肢を提供:', choices.length);
             await interaction.respond(choices);
           } else {
+            console.log('list_idが選択されていないため、カードの選択肢を提供できません');
             await interaction.respond([]);
           }
         } catch (error) {

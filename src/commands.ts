@@ -90,12 +90,11 @@ export const listsCommand: CommandHandler = {
         .setDescription(`${lists.length}件のリストがあります`)
         .setFooter({ text: 'Trello Lists', iconURL: 'https://trello.com/favicon.ico' })
         .setTimestamp();
-      
-      // リスト情報を追加
+        // リスト情報を追加
       for (const list of lists) {
         embed.addFields({
           name: list.name,
-          value: `ID: ${list.id.substring(0, 8)}... (${list.closed ? '閉じています' : '開いています'})`,
+          value: `ID: ${list.id} (${list.closed ? '閉じています' : '開いています'})`,
           inline: false
         });
       }
@@ -138,13 +137,13 @@ export const cardCreateCommand: CommandHandler = {
         .addStringOption(option => 
           option
             .setName('list_id')
-            .setDescription('リストID (選択肢から選べます)')
+            .setDescription('リスト名を選択')
             .setRequired(true)
             .setAutocomplete(true))
         .addStringOption(option => 
           option
             .setName('card_id')
-            .setDescription('カードID (選択肢から選べます)')
+            .setDescription('カード名を選択')
             .setRequired(true)
             .setAutocomplete(true))),
   
@@ -248,8 +247,9 @@ export const listCardsCommand: CommandHandler = {
     .addStringOption(option => 
       option
         .setName('list_id')
-        .setDescription('リストID')
-        .setRequired(true)),
+        .setDescription('リストのID（/trello-listsで確認できます）')
+        .setRequired(true)
+        .setAutocomplete(true)),
   
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
@@ -270,7 +270,7 @@ export const listCardsCommand: CommandHandler = {
       const displayCards = cards.slice(0, 25);      for (const card of displayCards) {
         embed.addFields({
           name: card.name,
-          value: `ID: ${card.id.substring(0, 8)}... ${card.due ? `\n期限: ${new Date(card.due).toLocaleDateString('ja-JP')}` : ''}`,
+          value: `ID: ${card.id} ${card.due ? `\n期限: ${new Date(card.due).toLocaleDateString('ja-JP')}` : ''}`,
           inline: false
         });
       }
