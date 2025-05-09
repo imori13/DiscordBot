@@ -33,6 +33,7 @@ export const helpCommand: CommandHandler = {
         { name: '/trello-lists', value: 'ボード内のリスト一覧を表示します', inline: true },
         { name: '/trello-card create', value: 'カードを作成します', inline: true },
         { name: '/trello-card view', value: 'カードの詳細を表示します', inline: true },
+        { name: '/trello-board-select', value: 'ボードを選択または一覧表示します', inline: true },
       )
       .setFooter({ text: 'Trello Discord Bot', iconURL: 'https://trello.com/favicon.ico' });
       
@@ -291,6 +292,9 @@ export const listCardsCommand: CommandHandler = {
   }
 };
 
+// ボード選択コマンドをインポート
+import { boardSelectCommand } from './commands/trello-board-select';
+
 // 全てのコマンドをまとめたもの
 export const commands = [
   helpCommand,
@@ -298,6 +302,7 @@ export const commands = [
   listsCommand,
   cardCreateCommand,
   listCardsCommand,
+  boardSelectCommand,
 ];
 
 // コマンドIDとハンドラーの対応マップ
@@ -307,4 +312,5 @@ export const commandHandlers = new Map<string, CommandHandler>([
   ['trello-lists', listsCommand],
   ['trello-card', cardCreateCommand],
   ['trello-list-cards', listCardsCommand],
+  ['trello-board-select', boardSelectCommand],
 ]);

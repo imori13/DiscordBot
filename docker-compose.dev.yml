@@ -8,12 +8,13 @@ services:
     container_name: trello-discord-bot-dev
     restart: unless-stopped
     env_file:
-      - .env.dev
-    volumes:
+      - .env.dev    volumes:
       # ホスト側のソースコードをマウント
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./tsconfig.json:/app/tsconfig.json
+      # 設定ファイル用のボリューム（ボード設定を永続化）
+      - config-volume:/app/config
     command: npm run dev
     networks:
       - bot-network
@@ -21,3 +22,6 @@ services:
 networks:
   bot-network:
     driver: bridge
+    
+volumes:
+  config-volume:

@@ -7,6 +7,7 @@ Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャ�
 現在実装されている機能:
 - Trelloボードの通知を定期的にチェック
 - 新しい通知をDiscordの指定チャンネルに送信
+- 複数のTrelloボードに対応し、ボード間の切り替えが可能
 - 以下のTrelloアクションに対応:
   - カード作成 (createCard)
   - カード更新/移動 (updateCard)
@@ -19,6 +20,7 @@ Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャ�
   - `/trello-card create` - カードを作成
   - `/trello-card view` - カードを表示（リスト選択→カード選択の順に選べます）
   - `/trello-list-cards` - リスト内のカード一覧を表示
+  - `/trello-board-select` - 使用するTrelloボードを選択または一覧表示
 
 ## Botの使用方法
 
@@ -39,8 +41,82 @@ Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャ�
 - `/trello-card view` - カードの詳細を表示します
   - まず `list_id` でリストを選択します (表示される選択肢から選べます)
   - 次に `card_id` でカードを選択します (選択したリストのカードが選択肢として表示されます)
+- `/trello-board-select` - 使用するTrelloボードを選択または一覧表示します
+  - `board_id`: 選択するボードのIDを指定します（省略時は一覧表示）
+  - ボードIDはオートコンプリートで選択可能です
 
 > **注意**: オートコンプリートが表示されない場合は、Discordアプリを再起動するか、ボットの権限設定を確認してください。（特に `applications.commands` のスコープがBotに付与されているか確認してください）
+
+## マルチボード対応
+
+このBotは複数のTrelloボードを管理でき、動的にボードを切り替えて利用することができます。
+ボードの選択や切り替えは以下の方法で行えます：
+
+- `/trello-board-select` コマンドでボードを選択または一覧表示
+- 自動的に利用可能なTrelloボードを検出（初回起動時）
+- 前回使用したボードを記憶して次回起動時に自動的に選択
+
+### ボード管理コマンド
+- `/trello-board-select` - 使用するTrelloボードを選択または一覧表示します
+  - `board_id`: 選択するボードのIDを指定します（省略時は一覧表示）
+  - ボードIDはオートコンプリートで選択可能です
+
+> **新機能**: 複数のボードを切り替えて使用できるようになりました。
+
+## Docker環境での使用方法
+
+このBotはDocker環境での実行を推奨しています。Docker Composeを使って簡単に起動できます。
+
+### 本番環境での起動方法
+
+1. `.env`ファイルを作成し、必要な環境変数を設定します：
+   ```
+   DISCORD_TOKEN=<Discordボットトークン>
+   DISCORD_CHANNEL_ID=<通知を送信するチャンネルID>
+   TRELLO_API_KEY=<TrelloのAPIキー>
+   TRELLO_TOKEN=<Trelloトークン>
+   ```
+
+2. 以下のコマンドでボットを起動します：
+   ```powershell
+   docker-compose up -d
+   # または付属のヘルパースクリプトを使用
+   .\docker-helper.ps1
+   ```
+
+3. ボットの停止は以下のコマンドで行います：
+   ```powershell
+   docker-compose down
+   # または
+   .\docker-helper.ps1 -Stop
+   ```
+
+4. 初回起動時にはボットが自動的に利用可能なTrelloボードを検出します。設定は永続ボリュームに保存されるため、再起動しても維持されます。
+
+### 開発環境での起動方法
+
+1. `.env.dev`ファイルを作成し、開発用の環境変数を設定します
+
+2. 開発モードで起動します：
+   ```powershell
+   docker-compose -f docker-compose.dev.yml up
+   ```
+
+### ボリュームについて
+
+このボットは以下のDockerボリュームを使用します：
+
+- `build-volume`: コンパイルされたJavaScriptファイルを保存します（コンテナ再起動時にビルドを保持）
+- `config-volume`: ボード設定情報を保存します（選択したボードの情報を永続化）
+
+データの永続化のため、これらのボリュームは自動的に作成・管理されます。
+
+### 設定ファイルの保存場所
+
+Docker環境では、設定ファイルは次の場所に保存されます：
+- ボード設定: `/app/config/boardConfig.json`
+
+> **注意**: Docker環境では設定ディレクトリのマウントが必要です。docker-compose.ymlファイルを確認し、`config-volume`が正しく設定されていることを確認してください。
 
 ## 開発予定の機能
 
@@ -49,9 +125,14 @@ Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャ�
 ### ステージ1: 基本通知機能 ✅
 - Trelloボードの活動通知をDiscordに送信する基本機能
 
-### ステージ2: 拡張通知と基本コマンド 🔄
+### ステージ2: 拡張通知と基本コマンド ✅
 - 通知メッセージの強化（リッチエンべッド、リンク、画像など）
 - 基本的なスラッシュコマンド実装
+
+### Docker対応とマルチボード機能 ✅
+- 複数のTrelloボードに対応
+- Docker環境での設定永続化
+- 設定ファイルのボリュームマウント
 
 ### ステージ3: 双方向連携 🔜
 - Discordからのカード作成・編集機能
@@ -74,8 +155,10 @@ DISCORD_TOKEN=あなたのDiscordボットトークン
 DISCORD_CHANNEL_ID=通知を送信したいチャンネルのID
 TRELLO_API_KEY=TrelloのAPIキー
 TRELLO_TOKEN=Trelloのトークン
-TRELLO_BOARD_ID=監視したいTrelloボードID
+TRELLO_BOARD_ID=監視したいTrelloボードID（オプション）
 ```
+
+> **注意**: `TRELLO_BOARD_ID`はオプションになりました。設定しない場合は自動的に利用可能なボードを検出します。
 
 3. TypeScriptをビルド
 ```bash
@@ -102,6 +185,41 @@ npm run dev
 - [Trello API Key](https://trello.com/app-key)からAPIキーとトークンを取得
 - 監視したいボードのURLから`https://trello.com/b/XXXX/board-name.json`で開かれる先頭のIDを取得
 
+## Docker環境での技術詳細
+
+### ボード設定の保存と永続化
+
+このボットはDockerコンテナ内で動作する際、以下の仕組みでボード設定を永続化しています：
+
+1. `config-volume` という名前のDockerボリュームを使用して設定ファイルを保存
+2. 設定ファイルのパスは環境変数 `CONFIG_DIR` で指定可能（デフォルトは `/app/config`）
+3. ボード設定ファイルは `boardConfig.json` という名前で保存
+4. 初回実行時はTrello APIからボード一覧を取得して設定ファイルを作成
+
+ボード設定ファイルの形式は以下の通りです：
+```json
+{
+  "activeBoardId": "選択されたボードのID", 
+  "recentBoards": [
+    {
+      "id": "ボードID",
+      "name": "ボード名",
+      "lastUsed": "最終使用日時（ISO形式）"
+    },
+    ...
+  ]
+}
+```
+
+### Docker環境での設定ディレクトリ
+
+Docker環境では、以下の環境変数を設定することで保存先を変更可能です：
+```
+CONFIG_DIR=/path/to/config
+```
+
+Dockerfile内で `ENV CONFIG_DIR="/app/config"` としてデフォルト値を設定しています。
+
 ## Docker Composeによる実行
 
 このプロジェクトには Docker 環境での実行をサポートするヘルパースクリプト (`docker-helper.ps1`) が含まれています。PowerShell で以下のように実行できます：
@@ -122,6 +240,13 @@ npm run dev
 # コンテナのログ表示
 .\docker-helper.ps1 -Logs
 # または開発環境のログ
+.\docker-helper.ps1 -Dev -Logs
+
+# Docker ボリューム一覧の表示
+.\docker-helper.ps1 -Volumes
+
+# 設定ボリュームの内容確認
+.\docker-helper.ps1 -Config
 .\docker-helper.ps1 -Dev -Logs
 
 # コンテナの停止

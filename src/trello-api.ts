@@ -12,15 +12,28 @@ import {
 // 環境変数の読み込み
 dotenv.config();
 
+// ボード管理モジュールをインポート
+import { getActiveBoardId } from './trello-boards';
+
 // Trello APIの設定
 const trelloApiKey = process.env.TRELLO_API_KEY || '';
 const trelloToken = process.env.TRELLO_TOKEN || '';
-const trelloBoardId = process.env.TRELLO_BOARD_ID || '';
 
 // 環境変数のバリデーション
-if (!trelloApiKey || !trelloToken || !trelloBoardId) {
+if (!trelloApiKey || !trelloToken) {
   console.error('環境変数が正しく設定されていません。.envファイルを確認してください。');
   process.exit(1);
+}
+
+// アクティブなボードIDを取得する関数
+function getTrelloBoardId(): string {
+  const boardId = getActiveBoardId();
+  if (!boardId) {
+    console.error('有効なボードIDがありません。環境変数または設定ファイルを確認してください。');
+    // エラーをスローせず、空文字列を返す
+    // 呼び出し側でハンドリングが必要
+  }
+  return boardId;
 }
 
 // APIの基本URL
@@ -34,8 +47,13 @@ function getAuthenticatedUrl(endpoint: string): string {
 // 監視中のボード情報を取得
 export async function getTrelloBoard(): Promise<TrelloBoard> {
   try {
+    const boardId = getTrelloBoardId();
+    if (!boardId) {
+      throw new Error('有効なボードIDがありません');
+    }
+    
     const response = await axios.get(
-      getAuthenticatedUrl(`/boards/${trelloBoardId}`),
+      getAuthenticatedUrl(`/boards/${boardId}`),
       {
         params: {
           fields: 'name,url,desc,labels,members',
@@ -51,10 +69,14 @@ export async function getTrelloBoard(): Promise<TrelloBoard> {
 }
 
 // ボード内のリスト一覧を取得
-export async function getTrelloBoardLists(): Promise<TrelloList[]> {
-  try {
+export async function getTrelloBoardLists(): Promise<TrelloList[]> {  try {
+    const boardId = getTrelloBoardId();
+    if (!boardId) {
+      throw new Error('有効なボードIDがありません');
+    }
+    
     const response = await axios.get(
-      getAuthenticatedUrl(`/boards/${trelloBoardId}/lists`),
+      getAuthenticatedUrl(`/boards/${boardId}/lists`),
       {
         params: {
           fields: 'name,closed',
@@ -193,8 +215,13 @@ export async function addMemberToCard(
 // ボードのメンバー一覧取得
 export async function getBoardMembers(): Promise<TrelloMember[]> {
   try {
+    const boardId = getTrelloBoardId();
+    if (!boardId) {
+      throw new Error('有効なボードIDがありません');
+    }
+    
     const response = await axios.get(
-      getAuthenticatedUrl(`/boards/${trelloBoardId}/members`)
+      getAuthenticatedUrl(`/boards/${boardId}/members`)
     );
     
     return response.data;

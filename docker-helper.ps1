@@ -4,7 +4,9 @@ param(
     [switch]$Build,
     [switch]$Stop,
     [switch]$Logs,
-    [switch]$Restart
+    [switch]$Restart,
+    [switch]$Volumes,
+    [switch]$Config
 )
 
 $composeFile = "docker-compose.yml"
@@ -24,6 +26,19 @@ if ($Build) {
 } elseif ($Restart) {
     Write-Host "Restarting containers using $composeFile..." -ForegroundColor Blue
     docker-compose -f $composeFile restart
+} elseif ($Volumes) {
+    Write-Host "Listing Docker volumes for this project..." -ForegroundColor Magenta
+    docker volume ls --filter "name=discordbot_"
+} elseif ($Config) {
+    Write-Host "Checking configuration volume..." -ForegroundColor Cyan
+    
+    # コンフィグボリュームのマウントパスを確認
+    $configPath = docker volume inspect discordbot_config-volume --format "{{.Mountpoint}}"
+    Write-Host "Config volume path: $configPath" -ForegroundColor Yellow
+    
+    # 一時的なコンテナを起動してボリューム内のファイルを確認
+    Write-Host "Files in config volume:" -ForegroundColor Green
+    docker run --rm -v discordbot_config-volume:/data alpine ls -la /data
 } else {
     Write-Host "Starting containers using $composeFile..." -ForegroundColor Green
     docker-compose -f $composeFile up -d

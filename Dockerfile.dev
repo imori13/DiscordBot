@@ -8,6 +8,7 @@ ENV DISCORD_CHANNEL_ID=""
 ENV TRELLO_API_KEY=""
 ENV TRELLO_TOKEN=""
 ENV TRELLO_BOARD_ID=""
+ENV CONFIG_DIR="/app/config"
 
 # 依存関係ファイルのコピー
 COPY package*.json ./

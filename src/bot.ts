@@ -20,12 +20,11 @@ dotenv.config();
 
 // 設定
 const POLL_INTERVAL = '*/5 * * * *'; // 5分ごとにチェック
-const trelloBoardId = process.env.TRELLO_BOARD_ID || '';
 const discordChannelId = process.env.DISCORD_CHANNEL_ID || '';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || '';
 
 // 環境変数のバリデーション
-if (!DISCORD_TOKEN || !trelloBoardId || !discordChannelId) {
+if (!DISCORD_TOKEN || !discordChannelId) {
   console.error('環境変数が正しく設定されていません。.envファイルを確認してください。');
   process.exit(1);
 }
@@ -48,6 +47,31 @@ client.once(Events.ClientReady, async (readyClient) => {
   
   // ステータス設定
   client.user?.setActivity('Trelloボードを監視中', { type: ActivityType.Watching });
+  
+  // ボードの初期化
+  try {
+    const { initializeBoardId, getAllBoards } = await import('./trello-boards');
+    const boardId = await initializeBoardId();
+    
+    if (boardId) {
+      console.log(`✅ Trelloボード初期化完了: ${boardId}`);
+      console.log(`💡 ボード選択コマンド /trello-board-select で別のボードに切り替えることができます`);
+      
+      // 利用可能なボードの数をチェック
+      try {
+        const boards = await getAllBoards();
+        if (boards.length > 1) {
+          console.log(`🔍 ${boards.length}個の利用可能なボードが見つかりました`);
+        }
+      } catch (error) {
+        // ボード数のチェックに失敗しても続行
+      }
+    } else {
+      console.warn('⚠️ 有効なボードが見つかりません。/trello-board-select コマンドでボードを選択してください');
+    }
+  } catch (error) {
+    console.error('Trelloボード初期化エラー:', error);
+  }
   
   // スラッシュコマンドを登録
   await registerCommands();
@@ -99,6 +123,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.respond(choices);
       } catch (error) {
         console.error('オートコンプリートエラー (lists):', error);
+        await interaction.respond([]);
+      }
+    } else if (command === 'trello-board-select' && focused.name === 'board_id') {
+      // ボード選択のオートコンプリート
+      try {
+        const { getAllBoards } = await import('./trello-boards');
+        const boards = await getAllBoards();
+        const choices = boards.map(board => ({
+          name: board.name,
+          value: board.id
+        }));
+        
+        console.log('trello-board-select コマンドのオートコンプリートを提供:', choices.length);
+        await interaction.respond(choices);
+      } catch (error) {
+        console.error('オートコンプリートエラー (boards):', error);
         await interaction.respond([]);
       }
     } else if (command === 'trello-card' && subcommand === 'view') {
@@ -196,9 +236,11 @@ async function checkTrelloNotifications(): Promise<void> {
       // 前回チェックした通知IDまで処理
       for (const notification of notifications) {
         if (notification.id === lastNotificationId) break;
+          // 現在のアクティブなボードの通知のみフィルタリング
+        const { getActiveBoardId } = await import('./trello-boards');
+        const activeBoardId = getActiveBoardId();
         
-        // 指定したボードの通知のみフィルタリング
-        if (notification.data?.board?.id === trelloBoardId) {
+        if (notification.data?.board?.id === activeBoardId) {
           newNotifications.push(notification);
         }
       }

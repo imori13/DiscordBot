@@ -8,12 +8,13 @@ services:
     container_name: trello-discord-bot
     restart: unless-stopped
     env_file:
-      - .env
-    volumes:
+      - .env    volumes:
       # ホスト側のソースコードをマウント（開発環境用）
       - ./src:/app/src:ro
       # ビルドファイルは永続化（コンテナ再起動時にビルドを保持）
       - build-volume:/app/dist
+      # 設定ファイル用のボリューム（ボード設定を永続化）
+      - config-volume:/app/config
     networks:
       - bot-network
 
@@ -23,3 +24,4 @@ networks:
 
 volumes:
   build-volume:
+  config-volume:
