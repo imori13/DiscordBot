@@ -2,6 +2,13 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# 環境変数の設定（実行時に.env.devまたは環境変数から上書き可能）
+ENV DISCORD_TOKEN=""
+ENV DISCORD_CHANNEL_ID=""
+ENV TRELLO_API_KEY=""
+ENV TRELLO_TOKEN=""
+ENV TRELLO_BOARD_ID=""
+
 # 依存関係ファイルのコピー
 COPY package*.json ./
 

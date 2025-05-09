@@ -35,7 +35,7 @@
     "@types/node": "^20.12.10",
     "@types/node-schedule": "^2.1.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.2"
+    "typescript": "^5.8.3"
   },
   "bin": {
     "trello-discord-bot": "./bin/trello-discord-bot"

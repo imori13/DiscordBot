@@ -12,6 +12,13 @@ Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャ�
   - カード更新/移動 (updateCard)
   - カードへのコメント (commentCard)
   - カードへのメンバー追加 (addedToCard)
+- Discordスラッシュコマンド:
+  - `/trello-help` - ヘルプを表示
+  - `/trello-board` - ボード概要を表示
+  - `/trello-lists` - リスト一覧を表示（簡易ID表示）
+  - `/trello-card create` - カードを作成
+  - `/trello-card view` - カードを表示（オートコンプリートでリスト・カード選択可能）
+  - `/trello-list-cards` - リスト内のカード一覧を表示（簡易ID表示）
 
 ## 開発予定の機能
 
@@ -195,3 +202,40 @@ docker-compose -f docker-compose.dev.yml down
    - 高度な連携機能
 
 各ステップは個別のマイルストーンとして管理し、段階的にリリースしていく予定です。
+
+## インストールと設定
+
+### 前提条件
+- Node.js 16.0.0以上
+- Discord Bot Token
+- Trello APIキーとトークン
+
+### Discord Developer Portalでの設定
+1. [Discord Developer Portal](https://discord.com/developers/applications)にアクセス
+2. 新規アプリケーションを作成、または既存のアプリケーションを選択
+3. 「Bot」タブで、以下の設定を行います：
+   - `Privileged Gateway Intents` セクションで以下を有効化：
+     - `SERVER MEMBERS INTENT` (必要に応じて)
+     - `MESSAGE CONTENT INTENT` (メッセージ内容にアクセスする場合)
+   - `Bot Permissions` で必要な権限を設定：
+     - `Send Messages`
+     - `Embed Links`
+     - `Read Message History`
+     - `Use Slash Commands`
+4. トークンをコピーして`.env`ファイルに設定
+
+### Trello APIの設定
+1. [Trello Developer API Keys](https://trello.com/app-key)にアクセス
+2. APIキーとトークンを取得
+3. `.env`ファイルに設定
+
+### 環境変数の設定
+`.env`ファイルを作成し、以下の環境変数を設定:
+
+```env
+DISCORD_TOKEN=あなたのDiscord Botトークン
+DISCORD_CHANNEL_ID=通知を送信するチャンネルID
+TRELLO_API_KEY=TrelloのAPIキー
+TRELLO_TOKEN=Trelloトークン
+TRELLO_BOARD_ID=監視対象のTrelloボードID
+```

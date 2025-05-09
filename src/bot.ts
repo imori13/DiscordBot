@@ -1,53 +1,174 @@
 import dotenv from 'dotenv';
-import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
+import { 
+  Client, 
+  GatewayIntentBits, 
+  TextChannel, 
+  EmbedBuilder, 
+  Events,
+  REST,
+  Routes,
+  ActivityType,
+  MessageCreateOptions
+} from 'discord.js';
 import schedule from 'node-schedule';
-import axios from 'axios';
-import { TrelloNotification } from './types';
+import { TrelloNotification, TrelloList, TrelloCard } from './types';
+import { getRecentNotifications, getTrelloBoardLists, getTrelloListCards } from './trello-api';
+import { commands, commandHandlers } from './commands';
 
 // 環境変数の読み込み
 dotenv.config();
+
+// 設定
+const POLL_INTERVAL = '*/5 * * * *'; // 5分ごとにチェック
+const trelloBoardId = process.env.TRELLO_BOARD_ID || '';
+const discordChannelId = process.env.DISCORD_CHANNEL_ID || '';
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN || '';
+
+// 環境変数のバリデーション
+if (!DISCORD_TOKEN || !trelloBoardId || !discordChannelId) {
+  console.error('環境変数が正しく設定されていません。.envファイルを確認してください。');
+  process.exit(1);
+}
 
 // Discordクライアントの初期化
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages
+    GatewayIntentBits.GuildMessages,
+    // 特権インテントはDiscord Developer Portalで有効化が必要です
+    // 必要に応じて以下をコメント解除してください
+    // GatewayIntentBits.MessageContent,
   ]
 });
-
-// Trello APIの設定
-const trelloApiKey = process.env.TRELLO_API_KEY || '';
-const trelloToken = process.env.TRELLO_TOKEN || '';
-const trelloBoardId = process.env.TRELLO_BOARD_ID || '';
-const discordChannelId = process.env.DISCORD_CHANNEL_ID || '';
-
-// 環境変数のバリデーション
-if (!trelloApiKey || !trelloToken || !trelloBoardId || !discordChannelId) {
-  console.error('環境変数が正しく設定されていません。.envファイルを確認してください。');
-  process.exit(1);
-}
 
 // 最後にチェックした通知のID
 let lastNotificationId: string = '';
 
 // Discord Botの起動時処理
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
-  // 1時間ごとにTrelloの通知をチェック
-  schedule.scheduleJob('0 * * * *', checkTrelloNotifications);
+client.once(Events.ClientReady, async (readyClient) => {
+  console.log(`✅ ${readyClient.user.tag} としてログインしました`);
+  
+  // ステータス設定
+  client.user?.setActivity('Trelloボードを監視中', { type: ActivityType.Watching });
+  
+  // スラッシュコマンドを登録
+  await registerCommands();
+
+  // 定期的にTrelloの通知をチェック
+  schedule.scheduleJob(POLL_INTERVAL, checkTrelloNotifications);
+  
   // 起動時にも一度チェック
   checkTrelloNotifications();
+});
+
+// スラッシュコマンドの登録
+async function registerCommands() {
+  try {
+    console.log('スラッシュコマンドを登録中...');
+    
+    const commandsData = commands.map(command => command.data.toJSON());
+    
+    const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+    
+    await rest.put(
+      Routes.applicationCommands(client.user!.id),
+      { body: commandsData }
+    );
+    
+    console.log('✅ スラッシュコマンドが正常に登録されました');
+  } catch (error) {
+    console.error('スラッシュコマンドの登録に失敗しました:', error);
+  }
+}
+
+// オートコンプリートのハンドリング
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isAutocomplete()) {
+    const command = interaction.commandName;
+    const focused = interaction.options.getFocused(true);
+    const subcommand = interaction.options.getSubcommand(false);
+    
+    if (command === 'trello-card' && subcommand === 'view') {
+      if (focused.name === 'list_id') {
+        // リスト選択のオートコンプリート
+        try {
+          const lists = await getTrelloBoardLists();
+          const choices = lists.map((list: TrelloList) => ({
+            name: `${list.name} (${list.id.substring(0, 8)}...)`,
+            value: list.id
+          }));
+          
+          await interaction.respond(choices);
+        } catch (error) {
+          console.error('オートコンプリートエラー (lists):', error);
+          await interaction.respond([]);
+        }
+      } else if (focused.name === 'card_id') {
+        // カード選択のオートコンプリート
+        try {
+          const listId = interaction.options.getString('list_id');
+          if (listId) {
+            const cards = await getTrelloListCards(listId);
+            const choices = cards.map((card: TrelloCard) => ({
+              name: `${card.name} (${card.id.substring(0, 8)}...)`,
+              value: card.id
+            }));
+            
+            await interaction.respond(choices);
+          } else {
+            await interaction.respond([]);
+          }
+        } catch (error) {
+          console.error('オートコンプリートエラー (cards):', error);
+          await interaction.respond([]);
+        }
+      }
+    }
+    return;
+  }
+
+  // スラッシュコマンドのハンドリング
+  if (!interaction.isChatInputCommand()) return;
+  
+  try {
+    const commandName = interaction.commandName;
+    const handler = commandHandlers.get(commandName);
+    
+    if (!handler) {
+      console.warn(`コマンド "${commandName}" のハンドラーが見つかりません`);
+      await interaction.reply({
+        content: 'このコマンドは現在利用できません',
+        ephemeral: true
+      });
+      return;
+    }
+    
+    await handler.execute(interaction);
+  } catch (error) {
+    console.error('コマンド実行中にエラーが発生しました:', error);
+    
+    // エラーメッセージを返信（すでに返信済みでないことを確認）
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply('❌ コマンドの実行中にエラーが発生しました');
+    } else {
+      await interaction.reply({
+        content: '❌ コマンドの実行中にエラーが発生しました',
+        ephemeral: true
+      });
+    }
+  }
 });
 
 // Trelloの通知をチェックする関数
 async function checkTrelloNotifications(): Promise<void> {
   try {
-    const response = await axios.get<TrelloNotification[]>(
-      `https://api.trello.com/1/members/me/notifications?key=${trelloApiKey}&token=${trelloToken}`
-    );
+    console.log('Trello通知をチェック中...');
+    const notifications = await getRecentNotifications(10);
     
-    const notifications = response.data;
-    if (notifications.length === 0) return;
+    if (notifications.length === 0) {
+      console.log('新しい通知はありません');
+      return;
+    }
     
     // 最新の通知IDを取得
     const newestNotificationId = notifications[0].id;
@@ -61,7 +182,7 @@ async function checkTrelloNotifications(): Promise<void> {
         if (notification.id === lastNotificationId) break;
         
         // 指定したボードの通知のみフィルタリング
-        if (notification.data && notification.data.board && notification.data.board.id === trelloBoardId) {
+        if (notification.data?.board?.id === trelloBoardId) {
           newNotifications.push(notification);
         }
       }
@@ -70,11 +191,15 @@ async function checkTrelloNotifications(): Promise<void> {
       if (newNotifications.length > 0) {
         const channel = client.channels.cache.get(discordChannelId);
         if (channel && channel instanceof TextChannel) {
+          console.log(`${newNotifications.length}件の新しい通知を送信します`);
+          
           for (const notification of newNotifications.reverse()) {
-            const message = formatTrelloNotification(notification);
+            const message = formatTrelloNotificationRich(notification);
             await channel.send(message);
           }
         }
+      } else {
+        console.log('対象ボードの新しい通知はありません');
       }
       
       // 最後にチェックした通知IDを更新
@@ -85,36 +210,106 @@ async function checkTrelloNotifications(): Promise<void> {
   }
 }
 
-// Trello通知をDiscordメッセージ形式に変換する関数
-function formatTrelloNotification(notification: TrelloNotification): string {
-  let message = '';
+// Trello通知をリッチなDiscordメッセージに変換する関数
+function formatTrelloNotificationRich(notification: TrelloNotification): MessageCreateOptions {
   const data = notification.data;
   const type = notification.type;
+  const creator = notification.memberCreator;
   
+  let title = '📢 Trello通知';
+  let description = '';
+  let color = 0x0079BF; // Trelloの青色
+  
+  // アクションに応じたカラーコード設定
+  const COLOR_MAP: {[key: string]: number} = {
+    commentCard: 0x61BD4F, // 緑
+    createCard: 0x61BD4F, // 緑
+    updateCard: 0xFFAB4A,  // オレンジ
+    addedToCard: 0x0079BF, // 青
+    removedFromCard: 0xEB5A46, // 赤
+    deleteCard: 0xEB5A46  // 赤
+  };
+  
+  // 通知タイプに基づいて内容を設定
   switch (type) {
     case 'commentCard':
-      message = `💬 **新しいコメント**: ${notification.memberCreator.fullName}さんが「${data.card?.name || '不明'}」カードにコメントしました: ${data.text || ''}`;
+      title = '💬 新しいコメント';
+      description = `${data.text || ''}`;
+      color = COLOR_MAP.commentCard;
       break;
+      
     case 'addedToCard':
-      message = `👤 **メンバー追加**: ${data.card?.name || '不明'}カードに${notification.memberCreator.fullName}さんが${data.member?.fullName || '不明'}さんを追加しました`;
+      title = '👤 メンバー追加';
+      description = `${data.card?.name || '不明'}カードに${data.member?.fullName || '不明'}さんが追加されました`;
+      color = COLOR_MAP.addedToCard;
       break;
+      
     case 'createCard':
-      message = `➕ **カード作成**: ${notification.memberCreator.fullName}さんが「${data.card?.name || '不明'}」カードを作成しました`;
+      title = '➕ カード作成';
+      description = `「${data.card?.name || '不明'}」カードが作成されました`;
+      if (data.list) {
+        description += `\nリスト: ${data.list.name}`;
+      }
+      color = COLOR_MAP.createCard;
       break;
+      
     case 'updateCard':
       if (data.listAfter && data.listBefore) {
-        message = `📋 **リスト移動**: ${notification.memberCreator.fullName}さんが「${data.card?.name || '不明'}」カードを「${data.listBefore.name}」から「${data.listAfter.name}」に移動しました`;
+        title = '📋 リスト移動';
+        description = `「${data.card?.name || '不明'}」カードが「${data.listBefore.name}」から「${data.listAfter.name}」に移動されました`;
       } else if (data.card?.closed) {
-        message = `🗑️ **カード削除**: ${notification.memberCreator.fullName}さんが「${data.card.name}」カードをアーカイブしました`;
+        title = '🗑️ カードアーカイブ';
+        description = `「${data.card.name}」カードがアーカイブされました`;
+        color = COLOR_MAP.deleteCard;
       } else {
-        message = `✏️ **カード更新**: ${notification.memberCreator.fullName}さんが「${data.card?.name || '不明'}」カードを更新しました`;
+        title = '✏️ カード更新';
+        description = `「${data.card?.name || '不明'}」カードが更新されました`;
       }
+      color = COLOR_MAP.updateCard;
       break;
+      
     default:
-      message = `📢 **Trello通知**: ${notification.memberCreator.fullName}さんによるアクション`;
+      title = `📢 ${type}`;
+      description = `不明な通知タイプです`;
   }
   
-  return message;
+  // リッチなEmbedを作成
+  const embed = new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(description)
+    .setColor(color)
+    .setAuthor({
+      name: creator.fullName,
+      iconURL: creator.avatarUrl || undefined
+    })
+    .setTimestamp(new Date(notification.date))
+    .setFooter({ text: 'Trello', iconURL: 'https://trello.com/favicon.ico' });
+  
+  // カード情報があれば追加
+  if (data.card) {
+    // カードへのリンク
+    const cardUrl = `https://trello.com/c/${data.card.id}`;
+    embed.setURL(cardUrl);
+    
+    // フィールドに追加情報
+    embed.addFields({ 
+      name: 'カード', 
+      value: `[${data.card.name}](${cardUrl})`,
+      inline: true 
+    });
+  }
+  
+  // ボード情報があれば追加
+  if (data.board) {
+    const boardUrl = `https://trello.com/b/${data.board.id}`;
+    embed.addFields({ 
+      name: 'ボード', 
+      value: `[${data.board.name}](${boardUrl})`,
+      inline: true 
+    });
+  }
+  
+  return { embeds: [embed] };
 }
 
 // エラーハンドリングの強化
@@ -127,7 +322,7 @@ process.on('uncaughtException', (error) => {
 });
 
 // Botにログイン
-client.login(process.env.DISCORD_TOKEN).catch(error => {
+client.login(DISCORD_TOKEN).catch(error => {
   console.error('Botのログインに失敗しました:', error);
   process.exit(1);
 });
