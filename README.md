@@ -51,7 +51,40 @@ npm run dev
 
 ## Docker Composeによる実行
 
+このプロジェクトには Docker 環境での実行をサポートするヘルパースクリプト (`docker-helper.ps1`) が含まれています。PowerShell で以下のように実行できます：
+
+```powershell
+# 本番環境でのコンテナ起動
+.\docker-helper.ps1
+
+# ビルドしながらコンテナ起動
+.\docker-helper.ps1 -Build
+
+# 開発環境でのコンテナ起動
+.\docker-helper.ps1 -Dev
+
+# 開発環境でのビルド&起動
+.\docker-helper.ps1 -Dev -Build
+
+# コンテナのログ表示
+.\docker-helper.ps1 -Logs
+# または開発環境のログ
+.\docker-helper.ps1 -Dev -Logs
+
+# コンテナの停止
+.\docker-helper.ps1 -Stop
+# または開発環境の停止
+.\docker-helper.ps1 -Dev -Stop
+
+# コンテナの再起動
+.\docker-helper.ps1 -Restart
+# または開発環境の再起動
+.\docker-helper.ps1 -Dev -Restart
+```
+
 ### 本番環境
+
+手動で Docker コマンドを実行する場合：
 
 ```bash
 # コンテナをビルドして起動
@@ -65,6 +98,8 @@ docker-compose down
 ```
 
 ### 開発環境
+
+手動で Docker コマンドを実行する場合：
 
 ```bash
 # 開発環境用の.env.devファイルを作成
@@ -80,3 +115,7 @@ docker-compose -f docker-compose.dev.yml logs -f
 # コンテナの停止
 docker-compose -f docker-compose.dev.yml down
 ```
+
+## GitHub 連携
+
+このプロジェクトを GitHub リポジトリに接続する手順は [GITHUB_SETUP.md](./GITHUB_SETUP.md) を参照してください。
