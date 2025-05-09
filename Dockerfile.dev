@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 依存関係ファイルのコピー
+COPY package*.json ./
+
+# 依存関係のインストール
+RUN npm install
+
+# TypeScriptソースコードと設定ファイルのコピー
+COPY tsconfig.json ./
+COPY src/ ./src/
+
+# ts-nodeをグローバルにインストール
+RUN npm install -g ts-node
+
+# 開発モードでアプリケーションを実行
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: trello-discord-bot-dev
+    restart: unless-stopped
+    env_file:
+      - .env.dev
+    volumes:
+      # ホスト側のソースコードをマウント
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+    command: npm run dev
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
