@@ -1,0 +1,21 @@
+{
+  "name": "trello-discord-bot",
+  "version": "1.0.0",
+  "description": "TrelloボードからDiscordへの通知を転送するBotアプリケーション",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["discord", "trello", "notification", "bot"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
+    "node-schedule": "^2.1.1",
+    "trello-events": "^0.1.7"
+  }
+}
