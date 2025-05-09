@@ -2,6 +2,8 @@
 
 Discord BotとTrello APIを連携し、Trelloボードの活動をDiscordチャンネルに通知するとともに、Discordから一部のTrello操作を可能にするアプリケーションです。
 
+> **問題が発生した場合は？** [トラブルシューティングガイド](TROUBLESHOOTING.md)をご覧ください。特にDocker環境でのコマンド重複問題への対処法を記載しています。
+
 ## 機能
 
 現在実装されている機能:

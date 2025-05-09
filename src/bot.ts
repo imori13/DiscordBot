@@ -92,10 +92,63 @@ async function registerCommands() {
     
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
     
-    await rest.put(
-      Routes.applicationCommands(client.user!.id),
-      { body: commandsData }
-    );
+    // Docker環境でコマンドの重複を防ぐため、既存のコマンドを削除
+    console.log('既存のコマンドをクリア中...');
+    
+    // グローバルコマンドを完全にクリア（必ず実行）
+    try {
+      await rest.put(
+        Routes.applicationCommands(client.user!.id),
+        { body: [] }
+      );
+      console.log('グローバルコマンドをクリアしました');
+    } catch (error) {
+      console.warn('グローバルコマンドのクリアに失敗しました:', error);
+    }
+      // ギルド（サーバー）限定で登録（即時反映される）
+    const guilds = client.guilds.cache;
+    
+    if (guilds.size > 0) {
+      console.log(`${guilds.size}個のサーバーに参加中。サーバー固有のコマンドを登録します...`);
+      
+      // 最初のサーバーにのみコマンドを登録（コマンド重複を防ぐため）
+      // Docker環境ではサーバーは基本的に1つのみを想定
+      const firstGuild = guilds.first();
+      const firstGuildId = firstGuild?.id;
+      
+      if (firstGuild && firstGuildId) {
+        try {
+          // まず既存のコマンドをクリア
+          await rest.put(
+            Routes.applicationGuildCommands(client.user!.id, firstGuildId),
+            { body: [] }
+          );
+          console.log(`サーバー "${firstGuild.name}" の既存コマンドをクリアしました`);
+          // 新しいコマンドを登録
+        await rest.put(
+          Routes.applicationGuildCommands(client.user!.id, firstGuildId),
+          { body: commandsData }
+        );
+        console.log(`サーバー "${firstGuild.name}" にコマンドを登録完了`);
+      } catch (error) {
+        console.error(`サーバー "${firstGuild.name}" のコマンド登録中にエラーが発生しました:`, error);
+        
+        // エラーが発生した場合はグローバルコマンドとして登録
+        console.log('サーバーコマンドの登録に失敗したため、グローバルコマンドとして登録します');
+        await rest.put(
+          Routes.applicationCommands(client.user!.id),
+          { body: commandsData }
+        );
+      }
+      }
+    } else {
+      console.warn('ボットがどのサーバーにも参加していません。グローバルコマンドとして登録します。');
+      // グローバル登録をフォールバックとして使用
+      await rest.put(
+        Routes.applicationCommands(client.user!.id),
+        { body: commandsData }
+      );
+    }
     
     console.log('✅ スラッシュコマンドが正常に登録されました');
   } catch (error) {

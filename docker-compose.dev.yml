@@ -6,9 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     container_name: trello-discord-bot-dev
-    restart: unless-stopped
+    restart: unless-stopped    
     env_file:
-      - .env.dev    volumes:
+      - .env.dev
+    volumes:
       # ホスト側のソースコードをマウント
       - ./src:/app/src
       - ./package.json:/app/package.json

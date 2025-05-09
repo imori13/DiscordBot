@@ -6,9 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: trello-discord-bot
-    restart: unless-stopped
+    restart: unless-stopped    
     env_file:
-      - .env    volumes:
+      - .env
+    volumes:
       # ホスト側のソースコードをマウント（開発環境用）
       - ./src:/app/src:ro
       # ビルドファイルは永続化（コンテナ再起動時にビルドを保持）
