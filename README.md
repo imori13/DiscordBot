@@ -199,6 +199,33 @@ npm run dev
 
 ## Docker環境での技術詳細
 
+### Docker アーキテクチャ
+
+このボットは下記のDockerアーキテクチャで構成されています：
+
+1. **マルチステージビルド（本番環境）**
+   - ビルドステージ: TypeScriptコンパイル、依存関係解決
+   - 実行ステージ: 最小限のランタイム環境、セキュリティ強化
+
+2. **コンテナ環境分離**
+   - 本番環境: `docker-compose.yml`, `Dockerfile`, `.env`
+   - 開発環境: `docker-compose.dev.yml`, `Dockerfile.dev`, `.env.dev`
+
+3. **永続化ボリューム**
+   - `build-volume`: コンパイル済みJavaScriptファイル（本番環境）
+   - `config-volume`: ボード設定・構成ファイル
+   - `logs-volume`: アプリケーションログ
+
+4. **セキュリティ対応**
+   - 非rootユーザー実行
+   - 機密情報は環境変数で管理
+   - 適切なパーミッション設定
+
+5. **ヘルスチェック**
+   - HTTP エンドポイント（port: 8080）を使用
+   - 30秒間隔で自動チェック
+   - 自己回復機能（`restart: unless-stopped`）
+
 ### ボード設定の保存と永続化
 
 このボットはDockerコンテナ内で動作する際、以下の仕組みでボード設定を永続化しています：
@@ -208,7 +235,8 @@ npm run dev
 3. ボード設定ファイルは `boardConfig.json` という名前で保存
 4. 初回実行時はTrello APIからボード一覧を取得して設定ファイルを作成
 
-ボード設定ファイルの形式は以下の通りです：
+#### ボード設定ファイルの形式
+
 ```json
 {
   "activeBoardId": "選択されたボードのID", 
@@ -223,14 +251,15 @@ npm run dev
 }
 ```
 
-### Docker環境での設定ディレクトリ
+### ボリューム管理
 
-Docker環境では、以下の環境変数を設定することで保存先を変更可能です：
-```
-CONFIG_DIR=/path/to/config
-```
+| ボリューム名 | 用途 | マウントポイント | 永続化内容 |
+|------------|-----|---------------|---------|
+| `build-volume` | ビルド成果物 | `/app/dist` | コンパイル済みJSファイル |
+| `config-volume` | 設定ファイル | `/app/config` | ボード設定、構成情報 |
+| `logs-volume` | ログ保存 | `/app/logs` | アプリケーションログ |
 
-Dockerfile内で `ENV CONFIG_DIR="/app/config"` としてデフォルト値を設定しています。
+※ 開発環境では、各ボリューム名に `-dev` が追加されます（例: `config-volume-dev`）
 
 ## Docker Composeによる実行
 

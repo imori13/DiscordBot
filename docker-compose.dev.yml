@@ -1,4 +1,5 @@
-version: '3.8'
+# 開発環境用Docker Compose設定
+# Composeの最新仕様で'version'は不要なため削除
 
 services:
   discord-bot:
@@ -10,19 +11,35 @@ services:
     env_file:
       - .env.dev
     volumes:
-      # ホスト側のソースコードをマウント
+      # ホスト側のソースコードをマウント (ライブリロード用)
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./tsconfig.json:/app/tsconfig.json
+      - ./scripts:/app/scripts
       # 設定ファイル用のボリューム（ボード設定を永続化）
       - config-volume:/app/config
+      # ログファイル用のボリューム
+      - logs-volume:/app/logs
     command: npm run dev
     networks:
-      - bot-network
+      - bot-network    # ヘルスチェック - 本番環境と同じチェック方法に統一
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # ホスト側からデバッグできるようにポート公開
+    # ports:
+    #   - "9229:9229"
 
 networks:
   bot-network:
     driver: bridge
+    name: trello-discord-network-dev
     
 volumes:
   config-volume:
+    name: trello-discord-config-dev
+  logs-volume:
+    name: trello-discord-logs-dev

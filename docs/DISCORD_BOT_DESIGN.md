@@ -17,17 +17,25 @@
 |   API    |      |  TypeScript) |      |  サーバー  |
 |          |      |              |      |           |
 +----------+      +--------------+      +-----------+
+                         |
+                  +--------------+
+                  |   設定ファイル  |
+                  | (Docker Volume)|
+                  +--------------+
 ```
 
 - **バックエンド**: Node.js & TypeScript
 - **デプロイ**: Docker コンテナ
 - **通信**: Discord API, Trello API (REST)
 - **スケジューリング**: node-schedule
-- **状態管理**: Bot内メモリ + 永続化
+- **状態管理**: Bot内メモリ + 設定ファイルでの永続化
+- **データ保存**: Dockerボリュームによる永続化
 
 ### システム要件
 
 - Discord Bot Token
+- Discord Client ID (コマンド登録用)
+- Discord Guild ID (オプション、特定サーバー用)
 - Trello API Key & Token
 - 監視対象のTrelloボードID
 - 通知送信先のDiscordチャンネルID
@@ -87,7 +95,7 @@ function createRichNotificationEmbed(notification: TrelloNotification): EmbedBui
 }
 ```
 
-### 3. スラッシュコマンド (実装予定)
+### 3. スラッシュコマンド (実装済み)
 
 Discord APIのInteraction機能を使用したスラッシュコマンド：
 
@@ -204,21 +212,23 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
 ## 開発ロードマップ
 
-### フェーズ1: 基盤強化 (現在実装中)
+### フェーズ1: 基盤強化 (完了)
 - 現行の通知システム最適化
 - ログ機能の強化
 - エラーハンドリングの改善
 - テスト環境構築
+- Docker環境整備
 
-### フェーズ2: リッチ通知実装
+### フェーズ2: リッチ通知実装 (完了)
 - Discord Embedを使用した見やすい通知
 - カードのサムネイル・リンク表示
-- メッセージのスレッド化対応
+- テキストフォーマットの改善
 
-### フェーズ3: 基本コマンド実装
+### フェーズ3: 基本コマンド実装 (完了)
 - スラッシュコマンド基盤作成
 - ボード・リスト表示機能
 - カード作成・移動機能
+- マルチボード対応
 
 ### フェーズ4: 高度なインタラクション
 - リアクションベースの操作

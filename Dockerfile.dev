@@ -2,9 +2,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# アプリケーション情報
+LABEL maintainer="開発チーム <dev@example.com>"
+LABEL description="Trello Discord 連携ボット（開発環境用）"
+LABEL version="1.0.0"
+
 # 環境変数の設定（実行時に.env.devまたは環境変数から上書き可能）
+ENV NODE_ENV="development"
 ENV DISCORD_TOKEN=""
 ENV DISCORD_CHANNEL_ID=""
+ENV CLIENT_ID=""
+ENV GUILD_ID=""
 ENV TRELLO_API_KEY=""
 ENV TRELLO_TOKEN=""
 ENV TRELLO_BOARD_ID=""
@@ -13,15 +21,35 @@ ENV CONFIG_DIR="/app/config"
 # 依存関係ファイルのコピー
 COPY package*.json ./
 
-# 依存関係のインストール
-RUN npm install
+# 依存関係のインストール（開発環境向けで全てのパッケージをインストール）
+# --no-fund と --no-audit フラグを追加して不要な出力を抑制
+RUN npm install --no-fund --no-audit && \
+    # ts-nodeをグローバルにインストール
+    npm install -g ts-node ts-node-dev
 
-# TypeScriptソースコードと設定ファイルのコピー
-COPY tsconfig.json ./
-COPY src/ ./src/
+# 必要なディレクトリを作成
+RUN mkdir -p "${CONFIG_DIR}" && \
+    mkdir -p /app/scripts && \
+    mkdir -p /app/logs && \
+    chown -R node:node "${CONFIG_DIR}" && \
+    chown -R node:node /app/scripts && \
+    chown -R node:node /app/logs
 
-# ts-nodeをグローバルにインストール
-RUN npm install -g ts-node
+# 非rootユーザーに切り替え
+USER node
+
+# ホストからマウントされるディレクトリは実行時にコンテナにマウントされる
+# - ./src:/app/src
+# - ./tsconfig.json:/app/tsconfig.json
+# - ./package.json:/app/package.json
+# - ./scripts:/app/scripts
+
+# ヘルスチェック - 本番環境と同じチェック方法に統一
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1));"
+
+# デバッグを有効化（必要に応じてコメントアウト解除）
+# ENV NODE_OPTIONS="--inspect=0.0.0.0:9229"
 
 # 開発モードでアプリケーションを実行
 CMD ["npm", "run", "dev"]
